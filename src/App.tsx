@@ -34,7 +34,7 @@ const videoConstraints: any = {
   facingMode: "environment", 
   // focusMode: "manual",  
   // focusDistance: 1,
-  zoom: 2,
+  zoom: 3,
   // whiteBalanceMode: "manual" 
 };
 
@@ -55,7 +55,61 @@ function App() {
   }
   let [Gdata, setGdata] = useState(gEmpty);
 
-  
+  // Medicion
+  let [resultado, setResultado] = useState(0);
+  const alfa: number = 200;
+  const beta: number = 190;
+  const [cantidad_de_corte, setCantidad_de_corte] = useState(-1);
+  const [tiempo_init, setTiempo_init] = useState(-1);
+  const [tiempo_end, setTiempo_end] = useState(-1);
+  const [TRC, setTRC] = useState(-1);
+  const [entroAlfa, setEntroAlfa] = useState(false);
+  let DEBUG = true;
+
+  useEffect(() => {
+    if (detectedPixels > alfa) {
+      //Aca estoy apretado
+      if (DEBUG) console.log("detectedPixels > alfa");
+      setCantidad_de_corte(detectedPixels);
+      setEntroAlfa(true);
+    } else if (detectedPixels >= beta && cantidad_de_corte > -1) {
+      //Aca el dedo se esta llenando de sangre
+      if (DEBUG) console.log("beta <= detectedPixels< alfa");
+      if (tiempo_init == -1) {
+        //Aca entra la primera vez que el detectedPixels< alfa
+        //tiempo_init = Date.now();
+        setTiempo_init(Date.now());
+        if (DEBUG) console.log("tiempo init =" + tiempo_init);
+      }
+    } else if (
+      tiempo_init > -1 &&
+      detectedPixels < beta &&
+      cantidad_de_corte > -1
+    ) {
+      if (DEBUG) console.log("detectedPixels < beta");
+      //tiempo_end = Date.now();
+      setTiempo_end(Date.now());
+      if (DEBUG) console.log("tiempo end =" + tiempo_end);
+    } else if (detectedPixels < beta && cantidad_de_corte > -1) {
+      if (DEBUG) console.log("NO tengo que entro aca NUNCA " + tiempo_init);
+    }
+
+    if (tiempo_init > -1 && tiempo_end > -1) {
+      //Aca calculo el tiempo y reinicio los contadores podria entrar en la linea luego de console.log("tiempo end =" + tiempo_end);
+      if (DEBUG)
+        console.log(
+          "TIEMPO TRANSCURRIDO ES = " +
+            (tiempo_end - tiempo_init) / 1000 +
+            " segundos"
+        );
+      setTiempo_init(-1);
+      setTiempo_end(-1);
+      setCantidad_de_corte(-1);
+      setEntroAlfa(false);
+      setResultado((resultado = (tiempo_end - tiempo_init) / 1000));
+    }
+    if (DEBUG) console.log("END- ########");
+  }, [resultado, detectedPixels]);
   
   useEffect(() => {
     const process = async () => {
@@ -64,8 +118,8 @@ function App() {
         let track = webcamRef?.current?.stream.getVideoTracks()[0];
         const capa = track.getCapabilities();
         const settings = track.getSettings();  
-        console.log(capa);
-        console.log(settings);
+        // console.log(capa);
+        // console.log(settings);
         if (!('zoom' in settings)) {
           return Promise.reject('Zoom is not supported by ' + track.label);
         }
@@ -97,8 +151,7 @@ function App() {
             ]
           });
         }
-       
-
+      
         if (!imageSrc) return;
         //debugger;
         return new Promise((resolve: any, reject: any) => {
@@ -109,14 +162,6 @@ function App() {
                 const proccessedData = processImage(cv.imread(imgRef.current));
                 if (torchonoff) {
                   setDetectedPixels(proccessedData.detectedPixels);
-                  // setHistdata(proccessedData.histogram);
-                  
-                  if (Gdata.length<100)
-                    Gdata.push(detectedPixels); 
-                  else
-                    setGdata([]);
-    
-                  
                   cv.imshow(inRef.current, proccessedData.image);
                 } else {
                   cv.imshow(inRef.current, proccessedData.croppedImage);
@@ -126,7 +171,6 @@ function App() {
                   if (error instanceof Error) {
                     console.error(error);
                     // hacer algo con el objeto de error
-                    // let myBuffer = new ArrayBuffer(0);
                     resolve();
                   } else {
                     console.error("Error desconocido:", error);
@@ -243,8 +287,11 @@ function App() {
         <span> Green channel mean intensity: {detectedPixels}</span>
         <br />
         <br /> 
+        <span> El TRC es de: {resultado} seg. </span>
+        <br />
+        <br />
         <button onClick={turnTorch}>LED ON/OFF</button>
-        <Line options={options} data={data} />
+        {/* <Line options={options} data={data} /> */}
       </div>
     </div>
   );

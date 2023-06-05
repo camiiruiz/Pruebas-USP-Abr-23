@@ -6,22 +6,22 @@ export function processImage(img) {
   let image2 = original.clone();
 
   cv.cvtColor(image2, newImg, cv.COLOR_RGBA2RGB,0);
+  cv.cvtColor(newImg, newImg, cv.COLOR_RGB2HSV,0);
 
   let centro = new cv.Point(100,100);
-  cv.circle(image2,centro,50,[255,0,0,1], 3); // Dibujo el ciruclo en el medio
-  
   let mask = new cv.Mat.zeros(200,200,CV_8U);
-  cv.circle(mask, centro, 50, [1,1,1,0], -1)
+  cv.circle(mask, centro, 50, [1,1,1,0], cv.FILLED);
   
   let media = cv.mean(newImg,mask);
-  let G = Math.round(media[1]);
-  console.log(G);
+  let H = Math.round(media[0]);
+  console.log(media);
 
+  cv.circle(image2,centro,50,[255,0,0,1], 3); // Dibujo el ciruclo en el medio
   
   return {
     image: image2,
     croppedImage: original,
-    detectedPixels: Math.round(G),
+    detectedPixels: Math.round(H),
   };
 
 }
